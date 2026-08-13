@@ -9,8 +9,15 @@ MODEL_PATH = "samaikaimran/urdu-ocr-codesaviours-si26-model"
 
 @st.cache_resource
 def load_model():
-    processor = TrOCRProcessor.from_pretrained(MODEL_PATH)
-    model = VisionEncoderDecoderModel.from_pretrained(MODEL_PATH)
+  processor = TrOCRProcessor.from_pretrained(
+    MODEL_PATH,
+    subfolder="best_trocr_model"
+)
+
+model = VisionEncoderDecoderModel.from_pretrained(
+    MODEL_PATH,
+    subfolder="best_trocr_model"
+)
 
     model.eval()
 
