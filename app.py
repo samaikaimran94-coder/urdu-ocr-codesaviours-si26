@@ -2,11 +2,21 @@ import streamlit as st
 import torch
 from PIL import Image
 from transformers import TrOCRProcessor, VisionEncoderDecoderModel
-# Hugging Face Model
+
+
+# PAGE CONFIGURATION
+st.set_page_config(
+    page_title="Urdu OCR | Code Saviours SI-26",
+    page_icon="🔤",
+    layout="centered"
+)
+
+# MODEL CONFIGURATION
+
 MODEL_PATH = "samaikaimran/urdu-ocr-codesaviours-si26-model"
 MODEL_SUBFOLDER = "best_trocr_model"
 
-# Load Model
+# LOAD MODEL
 
 @st.cache_resource
 def load_model():
@@ -25,69 +35,132 @@ def load_model():
 
     return processor, model
 
-# Load Model
+# HEADER
 
-processor, model = load_model()
-# Streamlit UI
+st.title("🔤 Urdu OCR")
 
-st.title("Urdu OCR - Code Saviours SI-26")
+st.subheader("Code Saviours — SI-26")
 
 st.write(
-    "Upload an Urdu image and the fine-tuned TrOCR model "
-    "will recognize the text."
+    "Upload an image containing Urdu text and the fine-tuned "
+    "TrOCR model will extract the text."
 )
 
-# Image Upload
+st.divider()
+
+# LOAD MODEL WITH ERROR HANDLING
+try:
+
+    with st.spinner("Loading Urdu OCR model..."):
+        processor, model = load_model()
+
+    st.success("Model loaded successfully!")
+
+except Exception as e:
+
+    st.error("Unable to load the OCR model.")
+
+    st.info(
+        "Please check the model repository and try again."
+    )
+
+    st.stop()
+
+# IMAGE UPLOAD
 
 uploaded_file = st.file_uploader(
     "Upload an Urdu image",
-    type=["png", "jpg", "jpeg"]
+    type=["png", "jpg", "jpeg"],
+    help="Supported formats: PNG, JPG and JPEG"
 )
-# OCR
+# OCR PROCESSING
 
 if uploaded_file is not None:
 
-    image = Image.open(uploaded_file).convert("RGB")
+    try:
 
-    st.image(
-        image,
-        caption="Uploaded Image",
-        use_container_width=True
-    )
+        image = Image.open(uploaded_file).convert("RGB")
 
-    if st.button("Extract Urdu Text"):
+        st.subheader("Uploaded Image")
 
-        with st.spinner("Reading Urdu text..."):
+        st.image(
+            image,
+            use_container_width=True
+        )
 
-            # Process image
-            pixel_values = processor(
-                images=image,
-                return_tensors="pt"
-            ).pixel_values
+        st.divider()
 
-            # Generate text
-            with torch.no_grad():
+        if st.button(
+            "🔍 Extract Urdu Text",
+            use_container_width=True
+        ):
 
-                generated_ids = model.generate(
-                    pixel_values,
-                    max_length=128,
-                    num_beams=4,
-                    repetition_penalty=1.2,
-                    early_stopping=True
+            with st.spinner("Extracting Urdu text..."):
+
+                pixel_values = processor(
+                    images=image,
+                    return_tensors="pt"
+                ).pixel_values
+
+                with torch.no_grad():
+
+                    generated_ids = model.generate(
+                        pixel_values,
+                        max_length=128,
+                        num_beams=4,
+                        repetition_penalty=1.2,
+                        early_stopping=True
+                    )
+
+                generated_text = processor.batch_decode(
+                    generated_ids,
+                    skip_special_tokens=True
+                )[0]
+
+                generated_text = generated_text.strip()
+
+            # OCR RESULT
+
+            st.subheader("📝 OCR Result")
+
+            if generated_text:
+
+                st.text_area(
+                    "Recognized Urdu Text",
+                    generated_text,
+                    height=180
                 )
 
-            # Decode
-            generated_text = processor.batch_decode(
-                generated_ids,
-                skip_special_tokens=True
-            )[0]
+                st.success("OCR extraction completed.")
 
-        # Result
+            else:
 
-        st.subheader("Recognized Urdu Text")
+                st.warning(
+                    "No text was detected in the uploaded image."
+                )
 
-        st.text_area(
-            "OCR Output",
-            generated_text,
-            height=150
+
+    except Exception as e:
+
+        st.error(
+            "An error occurred while processing the image."
         )
+
+        st.write(
+            "Please try another PNG, JPG or JPEG image."
+        )
+
+else:
+
+    st.info(
+        "👆 Upload an Urdu image to begin OCR."
+    )
+
+# FOOTER
+
+
+st.divider()
+
+st.caption(
+    "Urdu OCR Project | Code Saviours SI-26"
+)
